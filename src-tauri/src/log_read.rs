@@ -1,4 +1,8 @@
-use std::{cell::{LazyCell, OnceCell}, collections::HashMap, path::PathBuf};
+use std::{
+    cell::{LazyCell, OnceCell},
+    collections::HashMap,
+    path::PathBuf,
+};
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -22,12 +26,27 @@ pub struct LogState {
 
 impl LogState {
     pub fn set_file(&mut self, file: PathBuf) {
-        self.file = Some(file.clone());
-        self.data =
-            OnceCell::new();
+        self.file = Some(file);
+        self.data = OnceCell::new();
     }
 
     pub fn data(&self) -> Option<&[Record]> {
-        self.data.get_or_init(|| serde_json::from_reader(std::fs::File::open(self.file.as_ref()?).ok()?).ok()).as_ref().map(Vec::as_slice)
+        self.data
+            .get_or_init(|| {
+                Some(
+                    std::fs::read_to_string(self.file.as_ref()?)
+                        .inspect_err(|e| log::warn!("{e:?}"))
+                        .ok()?
+                        .lines()
+                        .filter_map(|line| {
+                            serde_json::from_str(line)
+                                .inspect_err(|e| log::warn!("{e:?}"))
+                                .ok()
+                        })
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .as_ref()
+            .map(Vec::as_slice)
     }
 }
