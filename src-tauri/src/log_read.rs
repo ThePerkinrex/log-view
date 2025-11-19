@@ -1,15 +1,15 @@
-use std::{cell::OnceCell, collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::OnceLock};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Serialize, Clone)]
 pub struct RecordExtra {
     pub task_id: Option<String>,
     pub process_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Record {
     pub level: String,
     pub target: String,
@@ -25,13 +25,13 @@ pub struct Record {
 #[derive(Debug, Default)]
 pub struct LogState {
     file: Option<PathBuf>,
-    data: OnceCell<Option<Vec<Record>>>,
+    data: OnceLock<Option<Vec<Record>>>,
 }
 
 impl LogState {
     pub fn set_file(&mut self, file: PathBuf) {
         self.file = Some(file);
-        self.data = OnceCell::new();
+        self.data = OnceLock::new();
     }
 
     pub fn data(&self) -> Option<&[Record]> {

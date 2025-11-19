@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    collections::{HashSet, VecDeque},
     path::{Path, PathBuf},
     sync::LazyLock,
 };
@@ -9,7 +10,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Settings {
-    pub recent: Vec<PathBuf>,
+    pub open: HashSet<PathBuf>,
+    pub recent: VecDeque<PathBuf>,
 }
 
 impl Settings {
@@ -18,6 +20,15 @@ impl Settings {
             .ok()
             .and_then(|file| serde_json::from_reader(file).ok())
             .unwrap_or_default()
+    }
+
+    /// Returns true if the file was not previously open
+    pub fn open(&mut self, path: PathBuf) -> bool {
+        if self.open.contains(&path) {
+            self.recent.retain(|x| x != &path);
+        }
+        self.recent.push_front(path.clone());
+        self.open.insert(path)
     }
 }
 
