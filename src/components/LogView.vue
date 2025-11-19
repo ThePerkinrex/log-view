@@ -1,22 +1,67 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { Record } from "../lib/record";
+import type { Record as LogRecord } from "../lib/record";
 
-const props = defineProps<{
+defineProps<{
   selectedFile: string | null;
-  records: Record[];
+  records: LogRecord[];
 }>();
 
+// Track expansions
 const expanded = ref<number | null>(null);
-
 function toggle(i: number) {
   expanded.value = expanded.value === i ? null : i;
 }
 
-function formatLine(r: Record) {
+// -------------------------------------------------------
+// COLOR MAPS
+// -------------------------------------------------------
+const taskColors = new Map<string, string>();
+const procColors = new Map<string, string>();
+const targetColors = new Map<string, string>();
+
+// Fixed colors for levels
+const levelColors: Record<string, string> = {
+  TRACE: "#7f8c8d",
+  DEBUG: "#3498db",
+  INFO:  "#2ecc71",
+  WARN:  "#f1c40f",
+  ERROR: "#e74c3c",
+};
+
+// deterministic pastel color generator
+function pickColor(map: Map<string,string>, key: string) {
+  if (map.has(key)) return map.get(key)!;
+
+  const h = (Array.from(key).reduce((a, c) => a + c.charCodeAt(0), 0) * 37) % 360;
+  const color = `hsl(${h}, 65%, 55%)`;
+  map.set(key, color);
+  return color;
+}
+
+// -------------------------------------------------------
+// FORMAT LINE INTO COLORED SEGMENTS
+// -------------------------------------------------------
+function colored(text: string, color: string) {
+  return `<span class="pill" style="color:${color}">[${text}]</span>`;
+}
+
+function formatHTML(r: LogRecord) {
   const task = r.extra.task_id ?? "None";
   const proc = r.extra.process_id ?? "None";
-  return `[T ${task}][P ${proc}][${r.target}][${r.level}] ${r.message}`;
+
+  const taskColor = pickColor(taskColors, task);
+  const procColor = pickColor(procColors, proc);
+  const targetColor = pickColor(targetColors, r.target);
+  const levelColor = levelColors[r.level] ?? "#bbb";
+
+  const t = colored(`T ${task}`, taskColor);
+  const p = colored(`P ${proc}`, procColor);
+  const tg = colored(r.target, targetColor);
+  const lvl = colored(r.level, levelColor);
+
+  // Final line — wrapped, monospace
+  return `${t} ${p} ${tg} ${lvl} ${r.message}`;
 }
 </script>
 
@@ -30,14 +75,15 @@ function formatLine(r: Record) {
     <div class="title">{{ selectedFile }}</div>
 
     <div 
-      class="log-line" 
-      v-for="(r, i) in records" 
+      class="log-line"
+      v-for="(r, i) in records"
       :key="i"
       @click="toggle(i)"
     >
-      <div class="mono line-text">
-        {{ formatLine(r) }}
-      </div>
+      <div
+        class="mono line-text"
+        v-html="formatHTML(r)"
+      ></div>
 
       <div v-if="expanded === i" class="expanded">
         <pre>{{ r }}</pre>
@@ -69,6 +115,7 @@ function formatLine(r: Record) {
   font-family: "Inter", sans-serif;
 }
 
+/* LOG ROW */
 .log-line {
   padding: 6px 4px;
   border-bottom: 1px solid #3a3a3a;
@@ -80,16 +127,30 @@ function formatLine(r: Record) {
   background: #3a3a3a;
 }
 
+/* PILL STYLE */
+.pill {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  color: black;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* LOG TEXT */
 .mono {
   font-family: monospace;
 }
 
 .line-text {
-  white-space: pre;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: pre-wrap; /* allow wrapping */
+  word-break: break-word; /* ensures long messages wrap */
 }
 
+/* EXPANDED VIEW */
 .expanded {
   margin-top: 6px;
   background: #1a1a1a;

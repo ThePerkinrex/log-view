@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted } from "vue";
 
-const props = defineProps<{
+defineProps<{
   openFiles: string[];
   recentFiles: string[];
   selectedFile: string | null;
@@ -9,31 +9,27 @@ const props = defineProps<{
 
 const emit = defineEmits(["select", "open-file", "close-file", "remove-recent"]);
 
-// Sidebar width (resizable)
+// Sidebar resizing
 const width = ref(260);
-let dragging = false;
+const resizing = ref(false);
 
-function startDrag() {
-  dragging = true;
+function startResize(e: MouseEvent) {
+  resizing.value = true;
+  e.preventDefault();
 }
 
-function stopDrag() {
-  dragging = false;
+function stopResize() {
+  resizing.value = false;
 }
 
-function drag(e: MouseEvent) {
-  if (!dragging) return;
-  width.value = Math.max(160, Math.min(e.clientX, 450));
+function doResize(e: MouseEvent) {
+  if (!resizing.value) return;
+  width.value = Math.max(180, e.clientX);
 }
 
 onMounted(() => {
-  window.addEventListener("mousemove", drag);
-  window.addEventListener("mouseup", stopDrag);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("mousemove", drag);
-  window.removeEventListener("mouseup", stopDrag);
+  window.addEventListener("mousemove", doResize);
+  window.addEventListener("mouseup", stopResize);
 });
 </script>
 
@@ -51,15 +47,11 @@ onBeforeUnmount(() => {
         :class="{ active: file === selectedFile }"
         @click="$emit('select', file)"
       >
-        <span class="path" :title="file">
-          {{ file.split('/').slice(-3).join('/') }}
-        </span>
+        <span class="file-path" :title="file">{{ file }}</span>
         <button 
           class="icon-btn close" 
           @click.stop="$emit('close-file', file)"
-        >
-          ×
-        </button>
+        >×</button>
       </li>
     </ul>
 
@@ -75,41 +67,47 @@ onBeforeUnmount(() => {
         :key="file"
         @click="$emit('select', file)"
       >
-        <span class="path" :title="file">
-          {{ file.split('/').slice(-3).join('/') }}
-        </span>
-
+        <span class="file-path" :title="file">{{ file }}</span>
         <button 
-          class="icon-btn close"
-          @click.stop="$emit('remove-recent', file)"
-        >
-          ×
-        </button>
+          class="icon-btn close" 
+          @click.stop="$emit('remove-recent', file); $emit('close-file', file)"
+        >×</button>
       </li>
     </ul>
-
-    <div class="drag-handle" @mousedown="startDrag"></div>
   </aside>
+
+  <div class="resize-handle" @mousedown="startResize"></div>
 </template>
 
 <style scoped>
+/* === Resizable sidebar === */
 .sidebar {
-  background: #1f1f1f;
-  border-right: 1px solid #333;
+  background: #272727;
+  border-right: 1px solid #444;
   padding: 12px;
-  color: #e0e0e0;
+  color: #f6f6f6;
   overflow-y: auto;
-  position: relative;
-  font-family: "Inter", sans-serif;
-  user-select: none;
+  font-family: Inter, sans-serif;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Resize bar */
+.resize-handle {
+  width: 4px;
+  cursor: ew-resize;
+  background: transparent;
+}
+.resize-handle:hover {
+  background: #555;
+}
+
+/* === Layout === */
 .section-header {
   display: flex;
   justify-content: space-between;
   margin-bottom: 6px;
   font-weight: 600;
-  font-size: 14px;
 }
 
 .file-list {
@@ -119,55 +117,53 @@ onBeforeUnmount(() => {
 }
 
 .file-list li {
-  padding: 8px;
+  padding: 8px 6px;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
+  gap: 6px;
   transition: background 0.2s;
-  font-size: 14px;
 }
 
 .file-list li:hover {
-  background: #2d2d2d;
+  background: #353535;
 }
 
 .file-list li.active {
-  background: #353556;
+  background: #3e3e60;
 }
 
-.path {
+/* === Path shortening from the START === */
+/* 
+   Magic trick:
+   direction: rtl reverses text rendering,
+   text-overflow: clip allows start clipping,
+   Unicode-bidi restores normal shaping.
+*/
+.file-path {
+  display: inline-block;
+  max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  display: block;
-  max-width: 180px;
+  direction: rtl;
+  text-overflow: clip;
+  unicode-bidi: plaintext;
+  text-align: left;
 }
 
+/* === Buttons === */
 .icon-btn {
   border: none;
   background: none;
   color: #aaa;
   cursor: pointer;
   font-size: 16px;
-  margin-left: 6px;
 }
-
 .icon-btn:hover {
-  color: #36c3e8;
+  color: #24c8db;
 }
-
 .close {
   font-size: 18px;
-}
-
-.drag-handle {
-  width: 5px;
-  height: 100%;
-  background: transparent;
-  cursor: col-resize;
-  position: absolute;
-  top: 0;
-  right: 0;
 }
 </style>
