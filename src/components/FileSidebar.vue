@@ -147,8 +147,8 @@ onMounted(() => {
   overflow: hidden;
   white-space: nowrap;
   direction: rtl;
-  text-overflow: clip;
-  unicode-bidi: plaintext;
+  text-overflow: ellipsis;
+  /* unicode-bidi: plaintext; */
   text-align: left;
 }
 

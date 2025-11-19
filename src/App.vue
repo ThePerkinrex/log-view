@@ -4,6 +4,7 @@ import {
   get_open_files,
   get_recent_files,
   get_file,
+  select_file as selectFileCommand,
   open_file as openFileCommand,
   close_file,
   remove_recent_file
@@ -24,14 +25,19 @@ async function reloadFiles() {
 }
 
 async function selectFile(path: string) {
+  await openFileCommand(path);
+  await reloadFiles();
   selectedFile.value = path;
   records.value = await get_file(path) ?? [];
+  
+  await reloadFiles();
 }
 
 async function openFile() {
-  const file = await openFileCommand();
-  await reloadFiles();
-  if (file) selectFile(file);
+  const file = await selectFileCommand();
+  if (file) {
+    selectFile(file);
+  }
 }
 
 async function closeSelectedFile() {
@@ -39,12 +45,12 @@ async function closeSelectedFile() {
   await close_file(selectedFile.value);
   selectedFile.value = null;
   records.value = [];
-  reloadFiles();
+  await reloadFiles();
 }
 
 async function deleteRecent(path: string) {
   await remove_recent_file(path);
-  reloadFiles();
+  await reloadFiles();
 }
 
 reloadFiles();

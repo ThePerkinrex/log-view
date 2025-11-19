@@ -9,8 +9,12 @@ export async function get_open_files(): Promise<string[]> {
 	return await invoke("get_open_files", {})
 }
 
-export async function open_file(): Promise<string | null | undefined> {
-	return await invoke("open_file", {})
+export async function select_file(): Promise<string | null | undefined> {
+	return await invoke("select_file", {})
+}
+
+export async function open_file(path: string): Promise<string | null | undefined> {
+	return await invoke("open_file", {path})
 }
 
 

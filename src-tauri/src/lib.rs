@@ -50,20 +50,29 @@ fn get_open_files(state: State<'_, RwLock<AppState>>) -> Vec<PathBuf> {
 }
 
 #[tauri::command]
-async fn open_file(
+async fn select_file(
     app: tauri::AppHandle,
-    state: State<'_, RwLock<AppState>>,
 ) -> Result<PathBuf, ()> {
     info!("Opening file");
     let file_path = match app.dialog().file().blocking_pick_file() {
         Some(a) => a,
         None => {
-            info!("NO file selected");
+            info!("No file selected");
             return Err(());
         }
     };
     info!("Opened file");
     let path = file_path.into_path().expect("a path");
+
+    Ok(path)
+}
+
+#[tauri::command]
+async fn open_file(
+    state: State<'_, RwLock<AppState>>,
+    path: PathBuf
+) -> Result<PathBuf, ()> {
+    
 
     state.write().unwrap().open(path.clone());
 
@@ -179,6 +188,7 @@ pub fn run() {
             greet,
             get_recent_files,
             get_open_files,
+            select_file,
             open_file,
             get_file,
             close_file,
