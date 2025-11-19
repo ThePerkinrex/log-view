@@ -13,6 +13,15 @@ export async function open_file(): Promise<string | null | undefined> {
 	return await invoke("open_file", {})
 }
 
+
+export async function close_file(file: string): Promise<void> {
+	return await invoke("close_file", {file})
+}
+
+export async function remove_recent_file(file: string): Promise<void> {
+	return await invoke("remove_recent_file", {file})
+}
+
 export async function get_file(path: string): Promise<Record[] | null | undefined> {
 	return await invoke("get_file", {path})
 }

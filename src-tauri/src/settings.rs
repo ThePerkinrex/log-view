@@ -28,15 +28,33 @@ impl Settings {
             self.recent.retain(|x| x != &path);
         }
         self.recent.push_front(path.clone());
-        self.open.insert(path)
+        let res = self.open.insert(path);
+        self.save();
+        res
+    }
+
+    /// Returns true if the file was previously open
+    pub fn close(&mut self, path: &Path) -> bool {
+        let res = self.open.remove(path);
+        self.save();
+        res
+    }
+
+    pub fn remove_recent(&mut self, file: &Path) {
+        self.recent.retain(|x| x != file);
+        self.save();
+    }
+
+    pub fn save(&self) {
+        std::fs::File::create(PROJECT_DIRS.settings_file())
+            .map(|file| serde_json::to_writer_pretty(file, self).unwrap())
+            .unwrap();
     }
 }
 
 impl Drop for Settings {
     fn drop(&mut self) {
-        std::fs::File::create(PROJECT_DIRS.settings_file())
-            .map(|file| serde_json::to_writer_pretty(file, self).unwrap())
-            .unwrap();
+        self.save();
     }
 }
 

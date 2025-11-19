@@ -71,6 +71,25 @@ async fn open_file(
 }
 
 #[tauri::command]
+fn close_file(
+    state: State<'_, RwLock<AppState>>,
+    file: PathBuf
+) {
+
+    state.write().unwrap().close(&file);
+
+}
+
+#[tauri::command]
+fn remove_recent_file(
+    state: State<'_, RwLock<AppState>>,
+    file: PathBuf
+) {
+    state.write().unwrap().remove_recent(&file);
+
+}
+
+#[tauri::command]
 fn get_file(state: State<'_, RwLock<AppState>>, path: PathBuf) -> Option<Vec<Record>> {
     state
         .write()
@@ -93,6 +112,17 @@ impl AppState {
                 Arc::new(state)
             });
         }
+    }
+
+    pub fn close(&mut self, file: &Path) {
+        if self.settings.close(file) {
+            self.open_files.remove(file);
+        }
+    }
+
+    pub fn remove_recent(&mut self, file: &Path) {
+        self.close(file);
+        self.settings.remove_recent(file);
     }
 
     pub fn get(&mut self, file: &Path) -> Option<Arc<LogState>> {
@@ -150,7 +180,9 @@ pub fn run() {
             get_recent_files,
             get_open_files,
             open_file,
-            get_file
+            get_file,
+            close_file,
+            remove_recent_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

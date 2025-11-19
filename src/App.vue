@@ -1,191 +1,109 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-import { get_open_files, get_recent_files, open_file as open_file_command } from "./commands";
+import { ref } from "vue";
+import { 
+  get_open_files,
+  get_recent_files,
+  get_file,
+  open_file as openFileCommand,
+  close_file,
+  remove_recent_file
+} from "./lib/commands";
 
-const greetMsg = ref("");
-const name = ref("");
+import FileSidebar from "./components/FileSidebar.vue";
+import LogView from "./components/LogView.vue";
+import type { Record } from "./lib/record";
 
-const open_files = ref<string[]>([]);
-const recent_files = ref<string[]>([]);
+const openFiles = ref<string[]>([]);
+const recentFiles = ref<string[]>([]);
+const selectedFile = ref<string | null>(null);
+const records = ref<Record[]>([]);
 
-async function reload_files() {
-  open_files.value = await get_open_files();
-  recent_files.value = await get_recent_files();
+async function reloadFiles() {
+  openFiles.value = await get_open_files();
+  recentFiles.value = await get_recent_files();
 }
 
-async function open_file(): Promise<string | null | undefined> {
-  let file = await open_file_command();
-
-  await reload_files();
-
-
-  return file;
+async function selectFile(path: string) {
+  selectedFile.value = path;
+  records.value = await get_file(path) ?? [];
 }
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
+async function openFile() {
+  const file = await openFileCommand();
+  await reloadFiles();
+  if (file) selectFile(file);
 }
 
-reload_files()
+async function closeSelectedFile() {
+  if (!selectedFile.value) return;
+  await close_file(selectedFile.value);
+  selectedFile.value = null;
+  records.value = [];
+  reloadFiles();
+}
+
+async function deleteRecent(path: string) {
+  await remove_recent_file(path);
+  reloadFiles();
+}
+
+reloadFiles();
 </script>
 
 <template>
-  <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
+  <div class="layout">
+    <FileSidebar 
+      :openFiles="openFiles"
+      :recentFiles="recentFiles"
+      :selectedFile="selectedFile"
+      @select="selectFile"
+      @open-file="openFile"
+      @close-file="closeSelectedFile"
+      @remove-recent="deleteRecent"
+    />
 
-    <div class="row">
-      <a href="https://vite.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
-    </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
-
-    <form class="row" @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
-    <ul>
-    <li v-for="item in open_files">
-    Open file: {{ item }}
-  </li>
-  </ul>
-    <ul>
-    <li v-for="item in recent_files">
-    Recent file: {{ item }}
-  </li>
-  </ul>
-  <button @click="open_file">Open file</button>
-  </main>
+    <main class="content">
+      <LogView 
+        :selectedFile="selectedFile"
+        :records="records"
+      />
+    </main>
+  </div>
 </template>
 
 <style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
+.layout {
+  display: flex;
+  height: 100vh;
+  background: #2b2b2b;
+  color: #f0f0f0;
+  font-family: "Inter", sans-serif;
+  overflow: hidden;
 }
 
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
+.content {
+  flex: 1;
+  padding: 0;
+  overflow-y: auto;
 }
 </style>
 <style>
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
+body, html {
   margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
+  padding: 0;
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  background: #1e1e1e;
+  color: #f6f6f6;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
+::-webkit-scrollbar {
+  width: 8px;
 }
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
 }
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-
-  button:active {
-    background-color: #0f0f0f69;
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 </style>
