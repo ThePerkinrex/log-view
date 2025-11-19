@@ -1,21 +1,25 @@
-use std::{
-    cell::{LazyCell, OnceCell},
-    collections::HashMap,
-    path::PathBuf,
-};
+use std::{cell::OnceCell, collections::HashMap, path::PathBuf};
 
 use serde::Deserialize;
 use serde_json::Value;
 
+#[derive(Debug, Deserialize, Default)]
+pub struct RecordExtra {
+    pub task_id: Option<String>,
+    pub process_id: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Record {
-    level: String,
-    target: String,
-    message: String,
-    module_path: Option<String>,
-    file: Option<String>,
-    line: Option<u32>,
-    data: HashMap<String, Value>,
+    pub level: String,
+    pub target: String,
+    pub message: String,
+    pub module_path: Option<String>,
+    pub file: Option<String>,
+    pub line: Option<u32>,
+    pub data: HashMap<String, Value>,
+    #[serde(default)]
+    pub extra: RecordExtra,
 }
 
 #[derive(Debug, Default)]

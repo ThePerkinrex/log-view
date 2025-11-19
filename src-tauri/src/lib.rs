@@ -4,6 +4,7 @@ use crate::log_read::LogState;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod log_read;
+mod settings;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
